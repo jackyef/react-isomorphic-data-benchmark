@@ -1,4 +1,4 @@
-const methodName = 'react-ssr';
+const methodName = 'react-ssr-3-times';
 
 import React from "react";
 import { renderToString } from "react-dom/server";
@@ -32,6 +32,8 @@ const warmUpV8 = () => {
 
   for (let i = 0; i < 20; i += 1) {
     renderToString(<RecursiveDivs depth={5} breadth={11} />);
+    renderToString(<RecursiveDivs depth={5} breadth={11} />);
+    renderToString(<RecursiveDivs depth={5} breadth={11} />);
   }
 
   console.info("Finished warming up!");
@@ -44,6 +46,8 @@ const benchmark = () => {
     const start = process.hrtime();
 
     // this renders around 64472 divs
+    renderToString(<RecursiveDivs depth={5} breadth={11} />);
+    renderToString(<RecursiveDivs depth={5} breadth={11} />);
     const markup = renderToString(<RecursiveDivs depth={5} breadth={11} />);
     
     time.push(process.hrtime(start));

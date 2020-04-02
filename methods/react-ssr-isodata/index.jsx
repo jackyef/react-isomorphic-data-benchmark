@@ -1,13 +1,15 @@
-const methodName = 'react-htm-ssr';
+const methodName = 'react-ssr-isodata';
 
 import React from "react";
-import { renderToString } from "react-dom/server";
+import { renderToStringWithData as renderToString } from 'react-isomorphic-data/ssr';
+import { DataProvider, createDataClient } from "react-isomorphic-data";
+
+global.fetch = require('node-fetch');
 
 const RecursiveDivs = ({ depth = 1, breadth = 1 }) => {
   if (depth <= 0) {
     return <div>abcdefghij</div>;
   }
-
   let children = [];
 
   for (let i = 0; i < breadth; i++) {
@@ -27,24 +29,36 @@ const RecursiveDivs = ({ depth = 1, breadth = 1 }) => {
   );
 };
 
-const warmUpV8 = () => {
+const warmUpV8 = async () => {
   console.info("Warming up...");
 
   for (let i = 0; i < 20; i += 1) {
-    renderToString(<RecursiveDivs depth={5} breadth={11} />);
+    const dataClient = createDataClient();
+
+    await renderToString(
+      <DataProvider client={dataClient}>
+        <RecursiveDivs depth={5} breadth={11} />
+      </DataProvider>
+    );
   }
 
   console.info("Finished warming up!");
 };
 
-const benchmark = () => {
+const benchmark = async () => {
   let time = [];
 
   for (let i = 0; i < 30; i += 1) {
     const start = process.hrtime();
 
+    const dataClient = createDataClient();
+    
     // this renders around 64472 divs
-    const markup = renderToString(<RecursiveDivs depth={5} breadth={11} />);
+    const markup = await renderToString(
+      <DataProvider client={dataClient}>
+        <RecursiveDivs depth={5} breadth={11} />
+      </DataProvider>
+    );
     
     time.push(process.hrtime(start));
 
@@ -75,5 +89,7 @@ const benchmark = () => {
   }));
 };
 
-warmUpV8();
-benchmark();
+(async () => {
+  await warmUpV8();
+  await benchmark();
+})();

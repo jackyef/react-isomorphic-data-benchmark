@@ -1,16 +1,15 @@
-/** @jsx h */
-const methodName = 'vhtml-htm';
+const methodName = 'react-ssr-with-prepass';
 
-import h from "vhtml";
-import htm from 'htm';
+import React from "react";
+import { renderToString } from 'react-dom/server';
+import prepass from 'react-ssr-prepass';
 
-const html = htm.bind(h);
+global.fetch = require('node-fetch');
 
 const RecursiveDivs = ({ depth = 1, breadth = 1 }) => {
   if (depth <= 0) {
     return <div>abcdefghij</div>;
   }
-
   let children = [];
 
   for (let i = 0; i < breadth; i++) {
@@ -19,36 +18,48 @@ const RecursiveDivs = ({ depth = 1, breadth = 1 }) => {
     );
   }
 
-  // vhtml only outputs to HTML, so no onClick here
   return (
-    <div>
+    <div
+      onClick={() => {
+        console.log("clicked");
+      }}
+    >
       {children}
     </div>
   );
 };
 
-const warmUpV8 = () => {
+const warmUpV8 = async () => {
   console.info("Warming up...");
 
   for (let i = 0; i < 20; i += 1) {
-    // with vhtml, this immediately return a string
-    <RecursiveDivs depth={5} breadth={11} />;
+    const app = <RecursiveDivs depth={5} breadth={11} />
+
+    await prepass(app);
+
+    renderToString(app);
   }
 
   console.info("Finished warming up!");
 };
 
-const benchmark = () => {
+const benchmark = async () => {
   let time = [];
 
   for (let i = 0; i < 30; i += 1) {
     const start = process.hrtime();
-
+    
     // this renders around 64472 divs
-    const markup = <RecursiveDivs depth={5} breadth={11} />;
+    const app = <RecursiveDivs depth={5} breadth={11} />
+
+    await prepass(app);
+
+    const markup = renderToString(app);
+    
     time.push(process.hrtime(start));
 
     require('fs').writeFileSync('./dist/test.html', markup);
+
   }
 
   console.info("================ RESULT ================");
@@ -57,7 +68,7 @@ const benchmark = () => {
   durations.forEach((d, i) => {
     console.info(`Run ${i} took `, d, "ms");
   });
-
+  
   console.info("================ SUMMARY ================");
   console.info(`[${methodName}]`);
   console.info(
@@ -74,5 +85,7 @@ const benchmark = () => {
   }));
 };
 
-warmUpV8();
-benchmark();
+(async () => {
+  await warmUpV8();
+  await benchmark();
+})();
